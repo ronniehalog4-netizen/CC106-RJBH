@@ -1,4 +1,5 @@
 from django.test import TestCase
+<<<<<<< HEAD
 from django.urls import reverse
 
 from .models import student
@@ -113,3 +114,7 @@ class StudentDirectoryTests(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, reverse('student_list'))
+=======
+
+# Create your tests here.
+>>>>>>> 4e2095b301e79c53a3163efbac07279351819274
