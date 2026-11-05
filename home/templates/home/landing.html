@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Student Management System</title>
+    </head>
+    <body>
+        <h1>Welcome to the Student Management System</h1>
+        <p>This is landing Page</p>
+
+        <a href="{% url 'home' %}">
+            Go to landing Page
+        </a>
+        <p><a href="{% url 'student_list' %}">View Student Directory</a></p>
+        <p><a href="{% url 'student_registration' %}">Register a Student</a></p>
+    </body>
+</html>

@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Registration complete</title>
+    <link rel="stylesheet" href="{% static 'registration/style.css' %}">
+</head>
+<body>
+    <h1>Registration complete</h1>
+    {% if messages %}
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% else %}
+        <p>The student has been registered successfully.</p>
+    {% endif %}
+    <p><a href="{% url 'student_list' %}">View Student Directory</a></p>
+    <p><a href="{% url 'student_registration' %}">Register another student</a></p>
+</body>
+</html>
