@@ -168,6 +168,35 @@ class StaffAuthenticationTests(TestCase):
             f'href="{reverse("student_create")}"',
         )
 
+    def test_dashboard_calculates_summary_and_searches_report(self):
+        self.client.force_login(self.staff_user)
+        student.objects.create(
+            student_id='AUTH002',
+            first_name='Alan',
+            last_name='Turing',
+            gender='Male',
+            date_of_birth='1912-06-23',
+            contact_number='5551234567',
+        )
+
+        response = self.client.get(reverse('staff_dashboard'))
+
+        self.assertEqual(response.context['total_students'], 2)
+        self.assertEqual(response.context['male_students'], 1)
+        self.assertEqual(response.context['female_students'], 1)
+        self.assertEqual(response.context['male_percent'], 50)
+        self.assertEqual(response.context['female_percent'], 50)
+
+        search_response = self.client.get(
+            reverse('staff_dashboard'),
+            {'q': 'turing'},
+        )
+        self.assertEqual(search_response.context['total_students'], 2)
+        self.assertEqual(
+            list(search_response.context['students']),
+            [student.objects.get(student_id='AUTH002')],
+        )
+
     def test_anonymous_users_are_redirected_from_staff_pages(self):
         for url in (
             reverse('staff_dashboard'),
