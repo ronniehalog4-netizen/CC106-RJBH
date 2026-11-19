@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from .models import student
@@ -6,6 +7,13 @@ from .models import student
 
 class StudentDirectoryTests(TestCase):
     def setUp(self):
+        user_model = get_user_model()
+        self.staff_user = user_model.objects.create_user(
+            username='staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_login(self.staff_user)
         self.record = student.objects.create(
             student_id='S001',
             first_name='Ada',
@@ -113,3 +121,127 @@ class StudentDirectoryTests(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, reverse('student_list'))
+
+
+class StaffAuthenticationTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.staff_user = user_model.objects.create_user(
+            username='staff',
+            password='test-password',
+            is_staff=True,
+        )
+        self.regular_user = user_model.objects.create_user(
+            username='student',
+            password='test-password',
+        )
+        self.record = student.objects.create(
+            student_id='AUTH001',
+            first_name='Staff',
+            last_name='Test',
+            gender='Female',
+            date_of_birth='2000-01-01',
+            contact_number='1234567890',
+        )
+
+    def test_login_page_and_invalid_credentials(self):
+        response = self.client.post(
+            reverse('login'),
+            {'username': 'staff', 'password': 'wrong-password'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Invalid username or password')
+
+    def test_staff_login_redirects_to_dashboard(self):
+        response = self.client.post(
+            reverse('login'),
+            {'username': 'staff', 'password': 'test-password'},
+        )
+
+        self.assertRedirects(response, reverse('staff_dashboard'))
+        dashboard_response = self.client.get(reverse('staff_dashboard'))
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(dashboard_response, 'Register New Student')
+        self.assertContains(
+            dashboard_response,
+            f'href="{reverse("student_create")}"',
+        )
+
+    def test_anonymous_users_are_redirected_from_staff_pages(self):
+        for url in (
+            reverse('staff_dashboard'),
+            reverse('student_list'),
+            reverse('student_create'),
+            reverse('student_detail', args=[self.record.pk]),
+            reverse('student_update', args=[self.record.pk]),
+            reverse('student_delete', args=[self.record.pk]),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url.split('?')[0], reverse('login'))
+
+    def test_non_staff_user_cannot_access_staff_pages(self):
+        self.client.force_login(self.regular_user)
+
+        for url in (
+            reverse('staff_dashboard'),
+            reverse('student_list'),
+            reverse('student_create'),
+            reverse('student_detail', args=[self.record.pk]),
+            reverse('student_update', args=[self.record.pk]),
+            reverse('student_delete', args=[self.record.pk]),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url.split('?')[0], reverse('login'))
+
+    def test_public_student_registration_remains_available(self):
+        response = self.client.get(reverse('student_registration'))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_public_student_registration_can_submit(self):
+        response = self.client.post(
+            reverse('student_registration'),
+            {
+                'student_id': 'PUBLIC001',
+                'first_name': 'Public',
+                'last_name': 'Student',
+                'gender': 'Female',
+                'date_of_birth': '2002-02-02',
+                'contact_number': '0987654321',
+            },
+        )
+
+        self.assertRedirects(response, reverse('registration_success'))
+        self.assertTrue(student.objects.filter(student_id='PUBLIC001').exists())
+
+    def test_logout_ends_session_and_redirects_to_login(self):
+        self.client.force_login(self.staff_user)
+
+        response = self.client.post(reverse('logout'))
+
+        self.assertRedirects(response, reverse('login'))
+        self.assertRedirects(
+            self.client.get(reverse('staff_dashboard')),
+            f"{reverse('login')}?next={reverse('staff_dashboard')}",
+        )
+
+    def test_student_registration_is_available_in_django_admin(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username='admin',
+            email='admin@example.com',
+            password='test-password',
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse('admin:registration_student_add')
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Add student')
+        self.assertContains(response, 'name="student_id"')

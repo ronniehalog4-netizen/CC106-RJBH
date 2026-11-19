@@ -7,25 +7,24 @@ class student(models.Model):
         ('Female', 'Female')
     ]
 
-    student_id=models.CharField(
+    student_id = models.CharField(
         max_length=20,
         unique=True)
 
-    first_name=models.CharField(
+    first_name = models.CharField(
         max_length=100)
 
-    last_name=models.CharField(
+    last_name = models.CharField(
         max_length=100)
 
-    gender=models.CharField(
+    gender = models.CharField(
         max_length=10,
         choices=GENDER_CHOICES)
 
-    date_of_birth=models.DateField()
+    date_of_birth = models.DateField()
 
-    contact_number=models.CharField(
+    contact_number = models.CharField(
         max_length=20)
 
     def __str__(self):
         return f"{self.student_id} - {self.first_name} {self.last_name}"
-    
